@@ -1,0 +1,103 @@
+# =========================
+# Общие исключения для .NET / MAUI / Visual Studio
+# =========================
+
+# Папки сборки и вывода
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings
+
+# Rider
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# MAUI-specific
+# =========================
+
+# Android
+**/Android/bin/
+**/Android/obj/
+**/Android/Properties/launchSettings.json
+**/Android/Resources/Resource.designer.cs
+**/[Aa]ndroid/[Bb]in/
+**/[Aa]ndroid/[Oo]bj/
+
+# iOS
+**/iOS/bin/
+**/iOS/obj/
+**/iOS/Entitlements.plist
+**/iOS/Info.plist
+**/iOS/Resources/
+**/[Ii]OS/[Bb]in/
+**/[Ii]OS/[Oo]bj/
+
+# Windows (WinUI)
+**/Windows/bin/
+**/Windows/obj/
+**/Windows/Package.appxmanifest
+**/[Ww]indows/[Bb]in/
+**/[Ww]indows/[Oo]bj/
+
+# =========================
+# Blazor / Web Assets
+# =========================
+
+# Временные файлы Blazor
+wwwroot/_content/
+wwwroot/css/
+wwwroot/js/
+wwwroot/favicon.ico
+
+# =========================
+# Локальные данные и пользовательские файлы
+# =========================
+
+# Ваша папка Data — должна быть проигнорирована
+Data/
+
+# =========================
+# Прочие временные и локальные файлы
+# =========================
+
+# Log files
+*.log
+
+# Backup files
+*~
+*.bak
+*.tmp
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# =========================
+# Исключения (если нужно включить какие-то файлы из проигнорированных папок)
+# =========================
+# Пример: если вы хотите отслеживать launchSettings.json, раскомментируйте:
+# !Properties/launchSettings.json
+Docks/.trash
+Docks/Media/hqt0t6mw69uf1.jpeg
+Docks/.obsidian

@@ -1,0 +1,29 @@
+---
+tags:
+  - temp
+  - без-хаба
+  - idea
+creation date: <% tp.file.creation_date("YYYY-MM-DD") %>
+modification date: <% tp.file.last_modified_date("YYYY-MM-DD HH") %>
+status: draft
+---
+<%*
+const title = await tp.system.prompt("Название заметки");
+await tp.file.rename(title);
+-%>
+
+# <% title %>
+
+## Сводка
+
+<% tp.file.cursor_append("Some text") %>
+
+## Основной
+
+<% tp.file.cursor_append("Some text") %>
+
+## Следующие шаги
+
+- [ ] Проработать идею
+- [ ] Связать с хабом (удалить #без-хаба)
+- [ ] Перенести в Main/, если готово
