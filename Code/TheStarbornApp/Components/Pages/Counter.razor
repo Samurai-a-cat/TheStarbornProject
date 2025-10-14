@@ -1,16 +1,73 @@
 ﻿@page "/counter"
+@inject IGameSimulation Game
+@using TheStarbornApp.GameCore.Services.GameSimulationService
+@implements IDisposable
 
-<h1>Counter</h1>
+<h1>GameSimulation Timer Test</h1>
 
-<p role="status">Current count: @_currentCount</p>
+@if (_isProcessActive)
+{
+    var elapsed = _currentElapsed;
+    var remaining = Math.Max(0, Duration - elapsed);
+    <p>Осталось: <strong>@((int)Math.Ceiling(remaining))</strong> сек</p>
+}
+else
+{
+    <p>Процесс не запущен</p>
+}
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<p>Завершённых циклов: <strong>@_completedCycles</strong></p>
+
+<button class="btn btn-primary" @onclick="StartProcess">Запустить @Duration-секундный процесс</button>
 
 @code {
-    private int _currentCount = 0;
+    private bool _isProcessActive;
+    private double _processStartTime;
+    private double _currentElapsed;
+    private int _completedCycles;
+    private const double Duration = 10.0;
+    private Timer? _uiRefreshTimer;
 
-    private void IncrementCount()
+    private void StartProcess()
     {
-        _currentCount++;
+        Game.Update();
+
+        _processStartTime = Game.Calendar.TotalSeconds;
+        _isProcessActive = true;
+        _currentElapsed = 0;
+
+
+        StartUiRefresh();
+    }
+
+    private void StartUiRefresh()
+    {
+        _uiRefreshTimer?.Dispose();
+        _uiRefreshTimer = new Timer(_ => InvokeAsync(() =>
+        {
+            if (!_isProcessActive) return;
+
+            Game.Update();
+            _currentElapsed = Game.Calendar.TotalSeconds - _processStartTime;
+
+            if (_currentElapsed >= Duration)
+            {
+                _completedCycles++;
+                _isProcessActive = false;
+                _uiRefreshTimer?.Dispose();
+            }
+
+            StateHasChanged();
+        }), null, 0, 500);
+    }
+
+    protected override void OnInitialized()
+    {
+        Game.Update();
+    }
+
+    public void Dispose()
+    {
+        _uiRefreshTimer?.Dispose();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TheStarbornApp.GameCore.Services.GameSimulationService;
 
 namespace TheStarbornApp;
 
@@ -20,7 +21,8 @@ public static class MauiProgram
 		builder.Services.AddBlazorWebViewDeveloperTools();
 		builder.Logging.AddDebug();
 #endif
-
+		
+		builder.Services.AddSingleton<IGameSimulation, GameSimulationService>();
 		return builder.Build();
 	}
 }
