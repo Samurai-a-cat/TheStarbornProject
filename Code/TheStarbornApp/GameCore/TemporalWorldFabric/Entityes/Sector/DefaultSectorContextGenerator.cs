@@ -15,7 +15,8 @@ public sealed class DefaultSectorContextGenerator : ISectorContextGenerator
         return new SharedContext(
             AsteroidDensity: Math.Clamp(richness + (float)rng.NextDouble() * 0.2f - 0.1f, 0.0f, 1.0f),
             ResourceRichness: richness,
-            ResourceAbundance: richness
+            ResourceAbundance: richness,
+            DustCloudSpawnModifier: richness
         );
     }
 }

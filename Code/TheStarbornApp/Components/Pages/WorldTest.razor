@@ -1,51 +1,140 @@
 ﻿@page "/WorldTest"
 @using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes
-@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.Asteroids
 @using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Sector
-@using TheStarbornApp.GameCore.TemporalWorldFabric.Interventions
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.Asteroids
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.DustClouds
 @inject ISectorPopulator Populator
 
 <h3>World Test — Sector (@_sector.X, @_sector.Y, @_sector.Z)</h3>
 
 <div class="controls mb-3">
-    <button class="btn btn-secondary" @onclick="GoBack">← Назад</button>
-    <button class="btn btn-primary" @onclick="Refresh">Обновить</button>
-    <button class="btn btn-secondary" @onclick="GoForward">Вперёд →</button>
+    <button class="btn btn-secondary me-2"
+            @onmousedown="() => StartMoving(-1)"
+            @onmouseup="StopMoving"
+            @onmouseleave="StopMoving">
+        ← Hold X-1
+    </button>
+
+    <button class="btn btn-primary me-2" @onclick="Refresh">Refresh</button>
+
+    <button class="btn btn-secondary"
+            @onmousedown="() => StartMoving(1)"
+            @onmouseup="StopMoving"
+            @onmouseleave="StopMoving">
+        Hold X+1 →
+    </button>
 </div>
 
-<ul class="list-group">
-    @foreach (var entity in _entities)
+<div class="mb-3">
+    <strong>Context:</strong>
+    Density: @_context.AsteroidDensity:F2,
+    Richness: @_context.ResourceRichness:F2,
+    Abundance: @_context.ResourceAbundance:F2
+    <!-- Убрано DustCloudSpawnModifier, если не добавляли в SharedContext -->
+</div>
+
+<div class="mb-3">
+    @if (!string.IsNullOrEmpty(_errorMessage))
     {
-    <li class="list-group-item">
-        <strong>@entity.Name</strong><br />
-        ID: @entity.Id.Value<br />
-        @if (entity is EnrichedAsteroid a)
-        {
-        <text>Ore: @a.OreAmount @a.OreType</text>
-        }
-    </li>
+        <div class="alert alert-danger" role="alert">
+            <strong>Error:</strong> @_errorMessage
+        </div>
     }
-</ul>
+</div>
+
+<div class="row">
+    @if (_entities.Count == 0 && string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="col-12 text-muted">Пусто</div>
+    }
+    @for (int i = 0; i < _entities.Count; i++)
+    {
+        var entity = _entities[i];
+        <div class="col-md-4 col-lg-3 mb-2">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">[@i] @entity.Name</h6>
+                    <p class="card-text">
+                        <small class="text-muted">ID: @entity.Id.Value</small><br/>
+                        @if (entity is EnrichedAsteroidInstance a)
+                        {
+                            <text>Ore: @a.OreAmount @a.OreType</text>
+                        }
+                        else if (entity is DustCloudInstance d)
+                        {
+                            <text>Dust: @d.ResourceAmount units (Valuable: @d.ValuableResourceAmount)</text>
+                        }
+                        else
+                        {
+                            <text>Type: @entity.GetType().Name</text>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-private SectorId _sector = new(0, 0, 0);
-private List<IEntity> _entities = new();
-private readonly long _gameSeconds = 0L;
-private readonly ulong _worldSeed = 12345UL;
+    private SectorId _sector = new(0, 0, 0);
+    private SharedContext _context = new(0, 0, 0, 0); // Возвращаем к старому конструктору, если не добавляли DustCloudSpawnModifier
+    private List<IEntity> _entities = new();
+    private string? _errorMessage = null; // Новое поле для сообщения об ошибке
+    private readonly long _gameSeconds = 0L;
+    private readonly ulong _worldSeed = 12345UL;
 
-protected override void OnInitialized() => Refresh();
+    private Timer? _moveTimer;
+    private int _moveDirection = 0;
 
-private void GoBack() => MoveSector(-20);
-private void GoForward() => MoveSector(+20);
-private void MoveSector(int offset)
-{
-_sector = new SectorId(_sector.X + offset, _sector.Y, _sector.Z);
-Refresh();
-}
+    protected override void OnInitialized()
+    {
+        Refresh();
+    }
 
-private void Refresh()
-{
-_entities = Populator.Populate(_sector, _gameSeconds, _worldSeed, Array.Empty<Intervention>()).ToList();
-StateHasChanged();
-}
+    private void StartMoving(int direction)
+    {
+        _moveDirection = direction;
+        _moveTimer = new Timer(_ => InvokeAsync(() =>
+        {
+            MoveSector(_moveDirection);
+            StateHasChanged();
+        }), null, 0, 100);
+    }
+
+    private void StopMoving()
+    {
+        _moveTimer?.Dispose();
+        _moveTimer = null;
+        _moveDirection = 0;
+    }
+
+    private void MoveSector(int offset)
+    {
+        _sector = new SectorId(_sector.X + offset, _sector.Y, _sector.Z);
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        _errorMessage = null; // Сбрасываем ошибку перед новой попыткой
+        try
+        {
+// Используем внедрённый ISectorPopulator
+// Вызываем метод PopulateSector
+            _entities = Populator.PopulateSector(_sector, _gameSeconds, _worldSeed).ToList();
+
+// Обновляем контекст для отображения
+            var contextGen = new DefaultSectorContextGenerator();
+            _context = contextGen.Generate(_sector, _gameSeconds, _worldSeed);
+        }
+        catch (Exception ex)
+        {
+// Ловим любое исключение и сохраняем сообщение
+            _errorMessage = ex.Message + (ex.InnerException != null ? " Inner: " + ex.InnerException.Message : "");
+            _entities.Clear(); // Очищаем список сущностей в случае ошибки
+            Console.WriteLine($"Error in Refresh: {_errorMessage}"); // Для логирования в консоль
+        }
+    }
+
 }

@@ -2,4 +2,4 @@
 
 public interface IMarker;
 public interface IAsteroidMarker : IMarker;
-public interface IPrototypeMarker : IMarker;
+public interface IDustCloudMarker : IMarker;
