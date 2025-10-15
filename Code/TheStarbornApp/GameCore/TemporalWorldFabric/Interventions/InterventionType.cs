@@ -1,10 +1,10 @@
-﻿using TheStarbornApp.GameCore.Entityes;
+﻿using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes;
 using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Sector;
 
 namespace TheStarbornApp.GameCore.TemporalWorldFabric.Interventions;
 
 public record Intervention(
-    EntityId TargetId,
+    EntityId EntityId,
     SectorId Sector,
     long GameSeconds,
     InterventionType Type,

@@ -1,0 +1,51 @@
+﻿@page "/WorldTest"
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.Asteroids
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Sector
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Interventions
+@inject ISectorPopulator Populator
+
+<h3>World Test — Sector (@_sector.X, @_sector.Y, @_sector.Z)</h3>
+
+<div class="controls mb-3">
+    <button class="btn btn-secondary" @onclick="GoBack">← Назад</button>
+    <button class="btn btn-primary" @onclick="Refresh">Обновить</button>
+    <button class="btn btn-secondary" @onclick="GoForward">Вперёд →</button>
+</div>
+
+<ul class="list-group">
+    @foreach (var entity in _entities)
+    {
+    <li class="list-group-item">
+        <strong>@entity.Name</strong><br />
+        ID: @entity.Id.Value<br />
+        @if (entity is EnrichedAsteroid a)
+        {
+        <text>Ore: @a.OreAmount @a.OreType</text>
+        }
+    </li>
+    }
+</ul>
+
+@code {
+private SectorId _sector = new(0, 0, 0);
+private List<IEntity> _entities = new();
+private readonly long _gameSeconds = 0L;
+private readonly ulong _worldSeed = 12345UL;
+
+protected override void OnInitialized() => Refresh();
+
+private void GoBack() => MoveSector(-20);
+private void GoForward() => MoveSector(+20);
+private void MoveSector(int offset)
+{
+_sector = new SectorId(_sector.X + offset, _sector.Y, _sector.Z);
+Refresh();
+}
+
+private void Refresh()
+{
+_entities = Populator.Populate(_sector, _gameSeconds, _worldSeed, Array.Empty<Intervention>()).ToList();
+StateHasChanged();
+}
+}

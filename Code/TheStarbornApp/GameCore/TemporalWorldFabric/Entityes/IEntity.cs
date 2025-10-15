@@ -1,9 +1,9 @@
-﻿namespace TheStarbornApp.GameCore.Entityes;
+﻿namespace TheStarbornApp.GameCore.TemporalWorldFabric.Entityes;
 
 /// <summary>
-/// Базовый контракт игровой сущности в системе Temporal World Fabric (TWF).
-/// Сущность — это неизменяемое состояние объекта, сгенерированное на лету
-/// на основе прототипа, времени, сектора и истории вмешательств.
+/// Базовый контракт игровой сущности.
+/// Сущность — это неизменяемый результат генерации (инстанс),
+/// созданный из прототипа с учётом контекста, времени и вмешательств.
 /// </summary>
 public interface IEntity
 {
