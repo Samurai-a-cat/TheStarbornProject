@@ -2,8 +2,7 @@
 using TheStarbornApp.GameCore.TemporalWorldFabric.Interventions;
 using System.Collections.ObjectModel;
 using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.Asteroids;
-using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.DustClouds;
-
+using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.GasClouds;
 namespace TheStarbornApp.GameCore.TemporalWorldFabric.Entityes;
 
 public interface ISectorPopulator
@@ -13,63 +12,38 @@ public interface ISectorPopulator
 
 public class SectorPopulator : ISectorPopulator
 {
-    private readonly ITemplateRegistry _templateRegistry;
-    private readonly IAsteroidFactory _asteroidFactory;
-    private readonly IDustCloudFactory _dustCloudFactory;
+    private readonly ITemplateRegistry _templateRegistry; // Оставляем, если газовые облака всё ещё используют TemplateData
     private readonly ISectorContextGenerator _contextGenerator;
+    private readonly AsteroidBlueprint _asteroidBlueprint; // Добавляем новый параметр
 
     public SectorPopulator(
-        ITemplateRegistry templateRegistry,
-        IAsteroidFactory asteroidFactory,
-        IDustCloudFactory dustCloudFactory,
-        ISectorContextGenerator contextGenerator)
+        // IAsteroidFactory asteroidFactory, // Убираем из параметров
+        ITemplateRegistry templateRegistry, // Оставляем, если газовые облака всё ещё используют TemplateData
+        ISectorContextGenerator contextGenerator,
+        AsteroidBlueprint asteroidBlueprint) // Добавляем новый параметр
     {
         _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
-        _asteroidFactory = asteroidFactory ?? throw new ArgumentNullException(nameof(asteroidFactory));
-        _dustCloudFactory = dustCloudFactory ?? throw new ArgumentNullException(nameof(dustCloudFactory));
         _contextGenerator = contextGenerator ?? throw new ArgumentNullException(nameof(contextGenerator));
+        _asteroidBlueprint = asteroidBlueprint ?? throw new ArgumentNullException(nameof(asteroidBlueprint));
     }
 
     public IReadOnlyList<IEntity> PopulateSector(SectorId sector, long gameSeconds, ulong worldSeed)
     {
         var rng = new Random((int)HashCode.Combine(sector.X, sector.Y, sector.Z, worldSeed));
         var context = _contextGenerator.Generate(sector, gameSeconds, worldSeed);
-
         var entities = new List<IEntity>();
 
-        // --- Астероиды ---
-        var asteroidTemplateData = _templateRegistry.GetData<AsteroidTemplateData>("enriched-asteroid");
-        if (asteroidTemplateData != null)
+        // --- Астероиды (НОВАЯ ЛОГИКА) ---
+        for (int i = 0; i < 5; i++) // Количество попыток спавна
         {
-            // Создаём шаблон из данных для проверки спавна
-            var asteroidTemplate = new AsteroidTemplate(
-                asteroidTemplateData.TemplateName,
-                asteroidTemplateData.BaseMass,
-                asteroidTemplateData.BaseScanDifficulty,
-                asteroidTemplateData.PossibleOreTypes,
-                asteroidTemplateData.BaseOreAmountMin,
-                asteroidTemplateData.BaseOreAmountMax,
-                asteroidTemplateData.BaseDensity);
-
-            for (int i = 0; i < 5; i++)
+            var entityId = GenerateEntityId(sector, "asteroid", i); // Изменим префикс
+            // Вызываем CreateCustomEntity у готового Blueprint
+            var asteroidInstance = _asteroidBlueprint.CreateCustomEntity(entityId, context, rng);
+            if (asteroidInstance != null) // CreateCustomEntity может вернуть null, если не должен спавниться
             {
-                if (asteroidTemplate.ShouldSpawn(context, rng))
-                {
-                    var entityId = GenerateEntityId(sector, "enriched-asteroid", i);
-                    var instance = _asteroidFactory.CreateAsteroidInstance(
-                        asteroidTemplateData, entityId, sector, gameSeconds, context, Enumerable.Empty<Intervention>(), rng);
-                    entities.Add(instance);
-                }
+                entities.Add(asteroidInstance);
             }
         }
-
-        // --- Пылевые облака ---
-        // Пока оставляем как есть, будет обновлено в будущем
-        // var dustCloudTemplateData = _templateRegistry.GetData<DustCloudTemplateData>("dust-cloud");
-        // if (dustCloudTemplateData != null)
-        // {
-        //     // Аналогично для пылевых облаков
-        // }
 
         return new ReadOnlyCollection<IEntity>(entities);
     }

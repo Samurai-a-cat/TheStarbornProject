@@ -1,9 +1,8 @@
 ﻿@page "/WorldTest"
 @using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes
 @using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Sector
-@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects
 @using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.Asteroids
-@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.DustClouds
+@using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.GasClouds
 @inject ISectorPopulator Populator
 
 <h3>World Test — Sector (@_sector.X, @_sector.Y, @_sector.Z)</h3>
@@ -31,7 +30,6 @@
     Density: @_context.AsteroidDensity:F2,
     Richness: @_context.ResourceRichness:F2,
     Abundance: @_context.ResourceAbundance:F2
-    <!-- Убрано DustCloudSpawnModifier, если не добавляли в SharedContext -->
 </div>
 
 <div class="mb-3">
@@ -61,9 +59,9 @@
                         {
                             <text>Ore: @a.OreAmount @a.OreType</text>
                         }
-                        else if (entity is DustCloudInstance d)
+                        else if (entity is GasCloudInstance g)
                         {
-                            <text>Dust: @d.ResourceAmount units (Valuable: @d.ValuableResourceAmount)</text>
+                            <text>Gas: @g.GasAmount units of @g.GasType (Density: @g.Density:F2)</text>
                         }
                         else
                         {
@@ -78,9 +76,9 @@
 
 @code {
     private SectorId _sector = new(0, 0, 0);
-    private SharedContext _context = new(0, 0, 0, 0); // Возвращаем к старому конструктору, если не добавляли DustCloudSpawnModifier
+    private SharedContext _context = new(0, 0, 0, 0);
     private List<IEntity> _entities = new();
-    private string? _errorMessage = null; // Новое поле для сообщения об ошибке
+    private string? _errorMessage = null;
     private readonly long _gameSeconds = 0L;
     private readonly ulong _worldSeed = 12345UL;
 
@@ -117,24 +115,19 @@
 
     private void Refresh()
     {
-        _errorMessage = null; // Сбрасываем ошибку перед новой попыткой
+        _errorMessage = null;
         try
         {
-// Используем внедрённый ISectorPopulator
-// Вызываем метод PopulateSector
             _entities = Populator.PopulateSector(_sector, _gameSeconds, _worldSeed).ToList();
-
-// Обновляем контекст для отображения
+            
             var contextGen = new DefaultSectorContextGenerator();
             _context = contextGen.Generate(_sector, _gameSeconds, _worldSeed);
         }
         catch (Exception ex)
         {
-// Ловим любое исключение и сохраняем сообщение
             _errorMessage = ex.Message + (ex.InnerException != null ? " Inner: " + ex.InnerException.Message : "");
-            _entities.Clear(); // Очищаем список сущностей в случае ошибки
-            Console.WriteLine($"Error in Refresh: {_errorMessage}"); // Для логирования в консоль
+            _entities.Clear();
+            Console.WriteLine($"Error in Refresh: {_errorMessage}");
         }
     }
-
 }

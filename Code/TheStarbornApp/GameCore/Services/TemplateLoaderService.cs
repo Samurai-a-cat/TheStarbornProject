@@ -1,14 +1,17 @@
-﻿using System.Reflection;
+﻿// File: TheStarbornApp/GameCore/Services/TemplateLoaderService.cs
+using System.Reflection;
 using System.Text.Json;
 using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.Asteroids;
+using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.GasClouds;
 using Microsoft.Extensions.Logging;
-using TheStarbornApp.GameCore.TemporalWorldFabric.Entityes.Objects.StellarObjects.DustClouds;
 
 namespace TheStarbornApp.GameCore.Services;
 
+// --- Обновлённый интерфейс ---
 public interface ITemplateLoaderService
 {
     IEnumerable<AsteroidTemplateData> LoadAsteroidTemplates();
+    IEnumerable<GasCloudTemplateData> LoadGasCloudTemplates();
 }
 
 public sealed class TemplateLoaderService : ITemplateLoaderService
@@ -66,13 +69,13 @@ public sealed class TemplateLoaderService : ITemplateLoaderService
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
 
-            var templateContainer = JsonSerializer.Deserialize<TemplateContainer>(jsonContent, options);
+            var templateContainer = JsonSerializer.Deserialize<AsteroidTemplateContainer>(jsonContent, options); // Обновлено
             
             if (templateContainer?.AsteroidTemplates != null)
             {
                 foreach (var template in templateContainer.AsteroidTemplates)
                 {
-                    ValidateTemplateData(template);
+                    ValidateAsteroidTemplateData(template);
                     templates.Add(template);
                 }
                 
@@ -94,17 +97,18 @@ public sealed class TemplateLoaderService : ITemplateLoaderService
         return templates;
     }
     
-    public IEnumerable<DustCloudTemplateData> LoadDustCloudTemplates()
+    // --- Новый метод для газовых облаков ---
+    public IEnumerable<GasCloudTemplateData> LoadGasCloudTemplates()
     {
-        var templates = new List<DustCloudTemplateData>();
+        var templates = new List<GasCloudTemplateData>();
     
         try
         {
-            var filePath = Path.Combine(_templatesDirectory, "dustclouds.json");
+            var filePath = Path.Combine(_templatesDirectory, "gas_clouds.json"); // Имя файла из предыдущего шага
         
             if (!File.Exists(filePath))
             {
-                _logger.LogWarning("Dust cloud template file not found at: {FilePath}", filePath);
+                _logger.LogWarning("Gas cloud template file not found at: {FilePath}", filePath);
                 return templates;
             }
 
@@ -115,53 +119,58 @@ public sealed class TemplateLoaderService : ITemplateLoaderService
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
 
-            var templateContainer = JsonSerializer.Deserialize<DustCloudTemplateContainer>(jsonContent, options);
+            var templateContainer = JsonSerializer.Deserialize<GasCloudTemplateContainer>(jsonContent, options); // Обновлено
         
-            if (templateContainer?.DustCloudTemplates != null)
+            if (templateContainer?.GasCloudTemplates != null)
             {
-                foreach (var template in templateContainer.DustCloudTemplates)
+                foreach (var template in templateContainer.GasCloudTemplates)
                 {
-                    ValidateDustCloudTemplateData(template);
+                    ValidateGasCloudTemplateData(template); // Обновлено
                     templates.Add(template);
                 }
             
-                _logger.LogInformation("Successfully loaded {Count} dust cloud templates from {FilePath}", 
+                _logger.LogInformation("Successfully loaded {Count} gas cloud templates from {FilePath}", 
                     templates.Count, filePath);
             }
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Error parsing JSON dust cloud template file");
-            throw new InvalidOperationException("Invalid JSON format in dust cloud template file", ex);
+            _logger.LogError(ex, "Error parsing JSON gas cloud template file");
+            throw new InvalidOperationException("Invalid JSON format in gas cloud template file", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading dust cloud template data from {Path}", _templatesDirectory);
+            _logger.LogError(ex, "Error loading gas cloud template data from {Path}", _templatesDirectory);
             throw;
         }
 
         return templates;
     }
     
-    private static void ValidateDustCloudTemplateData(DustCloudTemplateData template)
+    // --- Валидация для газовых облаков ---
+    private static void ValidateGasCloudTemplateData(GasCloudTemplateData template)
     {
         if (string.IsNullOrWhiteSpace(template.TemplateName))
-            throw new InvalidOperationException("TemplateName cannot be null or empty");
+            throw new InvalidOperationException("TemplateName for GasCloud cannot be null or empty");
         
-        if (template.BaseDustAmount < 0)
-            throw new InvalidOperationException($"BaseDustAmount cannot be negative for template {template.TemplateName}");
-        
-        if (template.SpawnChance < 0 || template.SpawnChance > 1)
-            throw new InvalidOperationException($"SpawnChance must be between 0 and 1 for template {template.TemplateName}");
+        if (template.PossibleGasTypes == null || template.PossibleGasTypes.Length == 0)
+            throw new InvalidOperationException($"PossibleGasTypes for GasCloud cannot be null or empty for template {template.TemplateName}");
+            
+        if (template.BaseGasAmountMin < 0 || template.BaseGasAmountMax < 0)
+            throw new InvalidOperationException($"BaseGasAmount values for GasCloud cannot be negative for template {template.TemplateName}");
+            
+        if (template.BaseGasAmountMin > template.BaseGasAmountMax)
+            throw new InvalidOperationException($"BaseGasAmountMin cannot be greater than BaseGasAmountMax for GasCloud template {template.TemplateName}");
+
+        if (template.BaseDensity < 0)
+            throw new InvalidOperationException($"BaseDensity for GasCloud cannot be negative for template {template.TemplateName}");
+
+        if (template.SpawnProbabilityFactor < 0)
+            throw new InvalidOperationException($"SpawnProbabilityFactor for GasCloud cannot be negative for template {template.TemplateName}");
     }
     
-    // Вспомогательный класс для десериализации JSON пылевых облаков
-    public sealed class DustCloudTemplateContainer
-    {
-        public DustCloudTemplateData[]? DustCloudTemplates { get; set; }
-    }
-
-    private static void ValidateTemplateData(AsteroidTemplateData template)
+    // --- Валидация для астероидов (оставлена как есть) ---
+    private static void ValidateAsteroidTemplateData(AsteroidTemplateData template)
     {
         if (string.IsNullOrWhiteSpace(template.TemplateName))
             throw new InvalidOperationException("TemplateName cannot be null or empty");
@@ -175,11 +184,15 @@ public sealed class TemplateLoaderService : ITemplateLoaderService
         if (template.BaseOreAmountMin > template.BaseOreAmountMax)
             throw new InvalidOperationException($"BaseOreAmountMin cannot be greater than BaseOreAmountMax for template {template.TemplateName}");
     }
-}
 
-// Вспомогательный класс для десериализации JSON
-public sealed class TemplateContainer
-{
-    public AsteroidTemplateData[]? AsteroidTemplates { get; set; }
-}
+    // --- Вспомогательные классы для десериализации (внутри класса) ---
+    private sealed class AsteroidTemplateContainer
+    {
+        public AsteroidTemplateData[]? AsteroidTemplates { get; set; }
+    }
 
+    private sealed class GasCloudTemplateContainer
+    {
+        public GasCloudTemplateData[]? GasCloudTemplates { get; set; }
+    }
+}
